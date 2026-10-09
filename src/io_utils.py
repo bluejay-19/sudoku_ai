@@ -31,8 +31,25 @@ def load_puzzle(path):
 
     return grid
 
+def print_grid(grid):
+    # row loop
+    for row_index, row in enumerate(grid, start=0):
+        grid_values = []
+        #
+        if row_index % 3 == 0 and row_index != 0:
+            print("------+-------+------")
+
+        for col_index, value in enumerate(row, start=0):
+            if col_index % 3 == 0 and col_index != 0:
+                grid_values.append("|")
+            if value == 0:
+                grid_values.append(".")
+            else:
+                grid_values.append(str(value))
+        print(" ".join(grid_values))
+
 # file only run when called directly
 if __name__ == "__main__":
-    print(load_puzzle("puzzles/bad.txt"))
-
-# def print_grid(grid):
+    #print(load_puzzle("puzzles/bad.txt"))
+    grid = load_puzzle("puzzles/hard1.txt")
+    print_grid(grid)
