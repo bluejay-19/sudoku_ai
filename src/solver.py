@@ -1,3 +1,6 @@
+#  import io_utils for load_puzzle and print_grid functionality
+from io_utils import load_puzzle, print_grid
+
 # is valid answers the question: If I wrote a digit in this cell, would that digit repeat already in this cell's row, column or 3x3 box?
 def is_valid(grid, row, col, digit):
     if digit in grid[row]:
@@ -19,3 +22,21 @@ def find_empty(grid):
             if grid[row][col] == 0:
                 return row,col
     return None # board is full - solved
+
+
+if __name__ == "__main__":
+    grid = load_puzzle("puzzles/easy1.txt")
+    print_grid(grid)
+
+    # testing isValid() on easy1.txt
+    # print(is_valid(grid, 0, 0, 4)) # row check - return False (4 is in row 0 not in column 0 or the box)
+    # print(is_valid(grid, 0, 0, 3))  # col check - return False (3 is in column 0 not in row 0 or the box)
+    # print(is_valid(grid, 0, 0, 1)) # box check - return False (1 is in the top-left box, not in row or column 0)
+    # print(is_valid(grid, 0, 0, 9)) # returns True (9 is not in row or column 0 and not in the top-left box)
+    # print(is_valid(grid, 7, 6, 1))  # returns False - bottom-right box check (cell(7,6) is empty, row7 has 4 & 5, column 6 has 4,5,2,6 & 8, box has a 1 in row 6, 8th column)
+    # print(is_valid(grid, 7, 6, 3))  # returns True - (same box as above but there is no three in the row, column or anywhere else in the box)
+
+    # testing find_empty on easy1.txt and bad.txt
+    print(find_empty(grid))
+    grid = load_puzzle("puzzles/bad.txt")
+    print(find_empty(grid))
