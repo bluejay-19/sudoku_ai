@@ -23,10 +23,26 @@ def find_empty(grid):
                 return row,col
     return None # board is full - solved
 
+# core logic of the solver
+def backtrack(grid, stats):
+    empty_cell = find_empty(grid)
+    if empty_cell is None:
+        return True
+    row, col = empty_cell
+    for digit in range(1,10):
+        if is_valid(grid, row, col, digit):
+            grid[row][col] = digit
+            # counts how many digits the solver placed = amount of work done (search steps measured)
+            stats["nodes"] += 1
+            result = backtrack(grid, stats)
+            if result:
+                return True
+            grid[row][col] = 0
+            # counts how many of those placements turned out to be wrong and need to be undone (amount of work wasted)
+            stats["backtracks"] += 1
+    return False
 
 if __name__ == "__main__":
-    grid = load_puzzle("puzzles/easy1.txt")
-    print_grid(grid)
 
     # testing isValid() on easy1.txt
     # print(is_valid(grid, 0, 0, 4)) # row check - return False (4 is in row 0 not in column 0 or the box)
@@ -37,6 +53,13 @@ if __name__ == "__main__":
     # print(is_valid(grid, 7, 6, 3))  # returns True - (same box as above but there is no three in the row, column or anywhere else in the box)
 
     # testing find_empty on easy1.txt and bad.txt
-    print(find_empty(grid))
-    grid = load_puzzle("puzzles/bad.txt")
-    print(find_empty(grid))
+    # print(find_empty(grid))
+    # grid = load_puzzle("puzzles/bad.txt")
+    # print(find_empty(grid))
+
+    # testing backtract on easy1.txt
+    grid = load_puzzle("puzzles/easy1.txt")
+    stats = {"nodes": 0, "backtracks": 0}
+    backtrack(grid, stats)
+    print(f"Nodes: {stats['nodes']}, Backtracks: {stats['backtracks']}")
+    print_grid(grid)
