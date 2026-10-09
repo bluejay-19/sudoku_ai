@@ -1,3 +1,6 @@
+from solver import is_valid
+
+
 def load_puzzle(path):
     # create an empty list to store the rows in our sudoku
     grid = []
@@ -51,5 +54,5 @@ def print_grid(grid):
 # file only run when called directly
 if __name__ == "__main__":
     #print(load_puzzle("puzzles/bad.txt"))
-    grid = load_puzzle("puzzles/hard1.txt")
+    grid = load_puzzle("puzzles/easy1.txt")
     print_grid(grid)
