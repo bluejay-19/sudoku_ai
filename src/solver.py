@@ -117,6 +117,7 @@ def solve(grid):
     else:
         return None, stats
 
+# TESTING EXAMPLES 
 
 if __name__ == "__main__":
     #print_grid(grid)
