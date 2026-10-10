@@ -1,4 +1,7 @@
 #  import io_utils for load_puzzle and print_grid functionality
+import time
+import copy
+
 from io_utils import load_puzzle, print_grid
 
 # is valid answers the question: If I wrote a digit in this cell, would that digit repeat already in this cell's row, column or 3x3 box?
@@ -23,7 +26,7 @@ def find_empty(grid):
                 return row,col
     return None # board is full - solved
 
-# core logic of the solver
+# core logic of the solver - plain backtracking
 def backtrack(grid, stats):
     empty_cell = find_empty(grid)
     if empty_cell is None:
@@ -42,7 +45,41 @@ def backtrack(grid, stats):
             stats["backtracks"] += 1
     return False
 
+# helper function that performs pre-checks answering the question "would this digit be allowed here if the cell were empty" if not it clashes with another given digit before the solving even start
+def conflict_check(grid):
+    for row in range(9):
+        for col in range(9):
+            if grid[row][col] != 0:
+                digit = grid[row][col]
+                grid[row][col] = 0      # empty the cell
+                value_fit = is_valid(grid, row, col, digit)
+                grid[row][col] = digit
+                if not value_fit:
+                    return True
+    return False # no conflicts found
+
+
+def solve(grid):
+    grid_copy = copy.deepcopy(grid)
+    stats ={"nodes": 0, "backtracks": 0}
+
+    # conflict check on the existing grid values (before solving)
+    if conflict_check(grid_copy):
+        stats["time"] = 0
+        return None, stats
+
+    start_time = time.perf_counter()
+    result = backtrack(grid_copy, stats)
+    end_time = time.perf_counter()
+    stats["time"] = end_time - start_time
+    if result is True:
+        return grid_copy, stats
+    else:
+        return None, stats
+
+
 if __name__ == "__main__":
+    #print_grid(grid)
 
     # testing isValid() on easy1.txt
     # print(is_valid(grid, 0, 0, 4)) # row check - return False (4 is in row 0 not in column 0 or the box)
@@ -58,8 +95,17 @@ if __name__ == "__main__":
     # print(find_empty(grid))
 
     # testing backtract on easy1.txt
-    grid = load_puzzle("puzzles/easy1.txt")
-    stats = {"nodes": 0, "backtracks": 0}
-    backtrack(grid, stats)
-    print(f"Nodes: {stats['nodes']}, Backtracks: {stats['backtracks']}")
-    print_grid(grid)
+    #grid = load_puzzle("puzzles/hard1.txt")
+    # stats = {"nodes": 0, "backtracks": 0}
+    # backtrack(grid, stats)
+    # print(f"Nodes: {stats['nodes']}, Backtracks: {stats['backtracks']}")
+    # print_grid(grid)
+
+    # testing solve and conflict_check
+    grid = load_puzzle("puzzles/bad.txt")
+    result, stats = solve(grid)
+    print(f"Nodes: {stats['nodes']}, Backtracks: {stats['backtracks']}, Time: {stats['time']}")
+    if result is None:
+        print("No solution found")
+    else:
+        print_grid(result)
