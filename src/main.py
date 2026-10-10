@@ -1,4 +1,4 @@
-# command line netry point
+# command line entry point
 import sys
 from io_utils import load_puzzle, print_grid
 from solver import solve
