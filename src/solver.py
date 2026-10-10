@@ -45,6 +45,46 @@ def backtrack(grid, stats):
             stats["backtracks"] += 1
     return False
 
+# domains - list of digits that could still go in that cell
+# a filled cell only has one possible value (the one already there), a blank cell has many digits dont clash
+def compute_domains(grid):
+    domains = []
+    for row in range(9):
+        current_row = []
+        for col in range(9):
+            set_of_cells = set()
+            # check if the cell is already filled
+            if grid[row][col] != 0:
+                set_of_cells.add(grid[row][col]) # set should hold the current digit
+            else:
+                # loop through all possible digits for a blank cell
+                for digit in range(1,10):
+                    if is_valid(grid, row, col, digit):
+                        set_of_cells.add(digit)
+            current_row.append(set_of_cells)
+        domains.append(current_row)
+    return domains
+
+# MRV - picks the blank cell with the fewest options first
+# forced moves get made early without guessing, doomed branches die near the top of the search tree
+# before the solver has to build a huge subtree under them
+# nodes and backtrakcs values drop which is an improvement from plain backtracking
+def select_mrv_cell(grid, domains):
+    # how many options does the most constrained cell seen so far have
+    best_size = 10
+    # which cell is the most constrained cell
+    best_cell = None
+    for row in range(9):
+        for col in range(9):
+            # skip filled cells
+            if grid[row][col] != 0:
+                continue
+            # compare domain's size with the best size
+            if len(domains[row][col]) < best_size:
+                best_size = len(domains[row][col])
+                best_cell = (row, col)
+    return best_cell
+
 # helper function that performs pre-checks answering the question "would this digit be allowed here if the cell were empty" if not it clashes with another given digit before the solving even start
 def conflict_check(grid):
     for row in range(9):
@@ -101,11 +141,29 @@ if __name__ == "__main__":
     # print(f"Nodes: {stats['nodes']}, Backtracks: {stats['backtracks']}")
     # print_grid(grid)
 
-    # testing solve and conflict_check
-    grid = load_puzzle("puzzles/bad.txt")
-    result, stats = solve(grid)
-    print(f"Nodes: {stats['nodes']}, Backtracks: {stats['backtracks']}, Time: {stats['time']}")
-    if result is None:
-        print("No solution found")
-    else:
-        print_grid(result)
+    # testing solve
+    # grid = load_puzzle("puzzles/bad.txt")
+    # result, stats = solve(grid)
+    # print(f"Nodes: {stats['nodes']}, Backtracks: {stats['backtracks']}, Time: {stats['time']}")
+    # if result is None:
+    #     print("No solution found")
+    # else:
+    #     print_grid(result)
+
+    # testing compute_domains & select_mrv_cell
+    # grid = load_puzzle("puzzles/medium1.txt")
+    # domains = compute_domains(grid)
+    # print(select_mrv_cell(grid, domains))
+    # print(domains[0])
+
+    # # rigging a cell to have a smaller domain than the current smallest domain
+    # # smallest domain for medium1.txt is (0,0)
+    # domains[8][8] = {3}
+    # print(select_mrv_cell(grid, domains))
+
+    # testing select_mrv_cell on a solved grid - correctly returns None (there is nothing left to fill in a solved grid)
+    grid = load_puzzle("puzzles/medium2.txt")
+    solution, stats = solve(grid)
+    domains = compute_domains(solution)
+    print(select_mrv_cell(solution, domains))
+
