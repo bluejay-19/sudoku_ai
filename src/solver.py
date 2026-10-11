@@ -158,23 +158,31 @@ def conflict_check(grid):
     return False # no conflicts found
 
 
-def solve(grid):
+def solve(grid, mode="plain"):
+    valid_modes = ["plain", "fc"]
+    if mode not in valid_modes:
+        raise ValueError(f"Invalid mode: {mode} Please choose 'plain' or 'fc'.")
+
     grid_copy = copy.deepcopy(grid)
-    stats ={"nodes": 0, "backtracks": 0, "wipeouts": 0}
+    stats ={"nodes": 0, "backtracks": 0, "wipeouts": 0, "time": 0}
 
     # conflict check on the existing grid values (before solving)
     if conflict_check(grid_copy):
         stats["time"] = 0
         return None, stats
-
     start_time = time.perf_counter()
-    result = backtrack(grid_copy, stats)
+    if mode == "plain":
+        result = backtrack(grid_copy, stats)
+        if result is True:
+            answer = grid_copy
+        else:
+            answer = None
+    else: # mode is "fc"
+        domain = compute_domains(grid_copy)
+        answer = fc_search(grid_copy, domain, stats)
     end_time = time.perf_counter()
     stats["time"] = end_time - start_time
-    if result is True:
-        return grid_copy, stats
-    else:
-        return None, stats
+    return answer, stats
 
 # TESTING EXAMPLES
 
@@ -251,16 +259,29 @@ if __name__ == "__main__":
     # print(domain_copy[0][3])
 
     # testing fc_search
-    grid = load_puzzle("puzzles/expert1.txt")
-    domain = compute_domains(grid)
-    fc_stats = {"nodes" : 0, "backtracks": 0, "wipeouts": 0}
-    fc_solution = fc_search(grid, domain, fc_stats)
-    plain_solution, plain_stats = solve(grid)
-    if fc_solution is None:
-        print("No solution found")
+    # grid = load_puzzle("puzzles/expert1.txt")
+    # domain = compute_domains(grid)
+    # fc_stats = {"nodes" : 0, "backtracks": 0, "wipeouts": 0}
+    # fc_solution = fc_search(grid, domain, fc_stats)
+    # plain_solution, plain_stats = solve(grid)
+    # if fc_solution is None:
+    #     print("No solution found")
+    # print_grid(fc_solution)
+    # print(fc_solution == plain_solution)
+    # print(fc_stats)
+    # print(plain_stats)
+
+    # testing solve with the updated fc_search and mrv included
+    grid = load_puzzle("puzzles/easy1.txt")
+    plain_solution , plain_stats = solve(grid, "plain")
+    fc_solution, fc_stats = solve(grid, "fc")
+
+    print("PLAIN solution:")
+    print_grid(plain_solution)
+    print("plain stats: ", plain_stats)
+
+    print("FC solution:")
     print_grid(fc_solution)
-    print(fc_solution == plain_solution)
-    print(fc_stats)
-    print(plain_stats)
+    print("fc stats:", fc_stats)
 
-
+    print("Same answer from both?", plain_solution == fc_solution)
