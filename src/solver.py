@@ -48,7 +48,7 @@ def backtrack(grid, stats):
 # domains - list of digits that could still go in that cell
 # a filled cell only has one possible value (the one already there), a blank cell has many digits dont clash
 def compute_domains(grid):
-    domains = []
+    domain = []
     for row in range(9):
         current_row = []
         for col in range(9):
@@ -62,14 +62,14 @@ def compute_domains(grid):
                     if is_valid(grid, row, col, digit):
                         set_of_cells.add(digit)
             current_row.append(set_of_cells)
-        domains.append(current_row)
-    return domains
+        domain.append(current_row)
+    return domain
 
 # MRV - picks the blank cell with the fewest options first
 # forced moves get made early without guessing, doomed branches die near the top of the search tree
 # before the solver has to build a huge subtree under them
 # nodes and backtrakcs values drop which is an improvement from plain backtracking
-def select_mrv_cell(grid, domains):
+def select_mrv_cell(grid, domain):
     # how many options does the most constrained cell seen so far have
     best_size = 10
     # which cell is the most constrained cell
@@ -80,10 +80,45 @@ def select_mrv_cell(grid, domains):
             if grid[row][col] != 0:
                 continue
             # compare domain's size with the best size
-            if len(domains[row][col]) < best_size:
-                best_size = len(domains[row][col])
+            if len(domain[row][col]) < best_size:
+                best_size = len(domain[row][col])
                 best_cell = (row, col)
     return best_cell
+
+# FORWARD CHECKING
+# returns the 20 cells that share a row, column or box with (row,col)
+def get_peers(row, col):
+    peers = set()
+    corner_row = row - row % 3
+    corner_col = col - col % 3
+
+    # cells in the same row: can't repeat this cell's digit
+    for i in range(9):
+        peers.add((i, col))
+    # cells in the same column
+    for j in range(9):
+        peers.add((row,j))
+    # cells in the same 3x3 box (this is what adds the 4 extra peers the row and column miss)
+    for m in range(3):
+        for n in range(3):
+            peers.add((corner_row + m, corner_col + n))
+    # a cell is not its own peer; otherwise forward checking would strip the digit from the cell that was just filled
+    peers.discard((row,col))
+    return peers
+
+# place a digit at a cell then tell every peer cell it can no longer use the placed digit
+def assign(grid, domain, row, col, digit):
+    # when search picks up a digit from the domain it is valid by construction because a cell's domain is already a list of digits that fit
+    # put the digit in the grid
+    grid[row][col] = digit
+    domain[row][col] = set({digit})
+    for r, c in get_peers(row,col):
+        # this digit is now taken in the peer's row/column/box
+        domain[r][c].discard(digit)
+        if len(domain[r][c]) == 0:
+            return False
+    return True
+
 
 # helper function that performs pre-checks answering the question "would this digit be allowed here if the cell were empty" if not it clashes with another given digit before the solving even start
 def conflict_check(grid):
@@ -117,7 +152,7 @@ def solve(grid):
     else:
         return None, stats
 
-# TESTING EXAMPLES 
+# TESTING EXAMPLES
 
 if __name__ == "__main__":
     #print_grid(grid)
@@ -151,20 +186,43 @@ if __name__ == "__main__":
     # else:
     #     print_grid(result)
 
-    # testing compute_domains & select_mrv_cell
+    # testing compute_domain & select_mrv_cell
     # grid = load_puzzle("puzzles/medium1.txt")
-    # domains = compute_domains(grid)
-    # print(select_mrv_cell(grid, domains))
-    # print(domains[0])
+    # domain = compute_domains(grid)
+    # print(select_mrv_cell(grid, domain))
+    # print(domain[0])
 
     # # rigging a cell to have a smaller domain than the current smallest domain
     # # smallest domain for medium1.txt is (0,0)
-    # domains[8][8] = {3}
-    # print(select_mrv_cell(grid, domains))
+    # domain[8][8] = {3}
+    # print(select_mrv_cell(grid, domain))
 
     # testing select_mrv_cell on a solved grid - correctly returns None (there is nothing left to fill in a solved grid)
-    grid = load_puzzle("puzzles/medium2.txt")
-    solution, stats = solve(grid)
-    domains = compute_domains(solution)
-    print(select_mrv_cell(solution, domains))
+    # grid = load_puzzle("puzzles/medium2.txt")
+    # solution, stats = solve(grid)
+    # domain = compute_domains(solution)
+    # print(select_mrv_cell(solution, domain))
 
+    # Testing get_peers
+    # grid = load_puzzle("puzzles/easy1.txt")
+    # domain = compute_domains(grid)
+    # row,column and box loops produce the right number of cells with overlaps counted once == 20
+    # print(len(get_peers(0,0)))
+    # same logic works from a different position in the grid (this test makes sure the corner arithmetic works with a cell that sits in the middle)
+    # print(len(get_peers(4, 4)))
+    # discard functionality worked - False (A cell must not count as its own peer)
+    # print((0,0) in get_peers(0,0))
+    # Box loop works - True (1,1) shares only a box with (0,0) not a row or column
+    # print((1, 1) in get_peers(0, 0))
+    # catches loops that add too much
+    # print((3, 3) in get_peers(0, 0))
+
+    #Testing assign
+    grid = load_puzzle("puzzles/easy1.txt")
+    grid_copy = copy.deepcopy(grid)
+    domain_copy = compute_domains(grid_copy)
+    # domain_copy[0][1] = {9}
+    print(assign(grid_copy, domain_copy, 0, 0, 9 ))
+    print(grid_copy[0][0], domain_copy[0][1])
+    print(domain_copy[0][3])
+    
