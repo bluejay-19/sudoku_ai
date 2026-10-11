@@ -119,6 +119,30 @@ def assign(grid, domain, row, col, digit):
             return False
     return True
 
+# recursive forward checking search
+# same skeleton as backtrack but three differences: it picks the cell with MRV, it only tries digits from that cell's domain, and it then uses assign to place them
+# returns the solved grid or None, and works with copies of the grid and domain
+def fc_search (grid, domain, stats):
+    cell = select_mrv_cell(grid, domain)
+    if cell is None:
+        return grid
+    row, col = cell
+    for digit in domain[row][col]:
+        # fresh copy per digit so a failed attempt leaves nothing behind (this is the undo)
+        grid_copy = copy.deepcopy(grid)
+        domain_copy = copy.deepcopy(domain)
+        # nodes = digits tried
+        stats["nodes"] += 1
+        if assign(grid_copy, domain_copy, row, col, digit):
+            result = fc_search(grid_copy, domain_copy, stats)
+            if result is not None:
+                return result
+        else:
+            # wipeouts shows how many dead ends were detected before the search goes deeper
+            stats["wipeouts"] += 1
+        # counted whether assign failed immediately or the deeper search failed
+        stats["backtracks"] += 1
+    return None
 
 # helper function that performs pre-checks answering the question "would this digit be allowed here if the cell were empty" if not it clashes with another given digit before the solving even start
 def conflict_check(grid):
@@ -136,7 +160,7 @@ def conflict_check(grid):
 
 def solve(grid):
     grid_copy = copy.deepcopy(grid)
-    stats ={"nodes": 0, "backtracks": 0}
+    stats ={"nodes": 0, "backtracks": 0, "wipeouts": 0}
 
     # conflict check on the existing grid values (before solving)
     if conflict_check(grid_copy):
@@ -170,7 +194,7 @@ if __name__ == "__main__":
     # grid = load_puzzle("puzzles/bad.txt")
     # print(find_empty(grid))
 
-    # testing backtract on easy1.txt
+    # testing backtrack on easy1.txt
     #grid = load_puzzle("puzzles/hard1.txt")
     # stats = {"nodes": 0, "backtracks": 0}
     # backtrack(grid, stats)
@@ -218,11 +242,25 @@ if __name__ == "__main__":
     # print((3, 3) in get_peers(0, 0))
 
     #Testing assign
-    grid = load_puzzle("puzzles/easy1.txt")
-    grid_copy = copy.deepcopy(grid)
-    domain_copy = compute_domains(grid_copy)
+    # grid = load_puzzle("puzzles/easy1.txt")
+    # grid_copy = copy.deepcopy(grid)
+    # domain_copy = compute_domains(grid_copy)
     # domain_copy[0][1] = {9}
-    print(assign(grid_copy, domain_copy, 0, 0, 9 ))
-    print(grid_copy[0][0], domain_copy[0][1])
-    print(domain_copy[0][3])
-    
+    # print(assign(grid_copy, domain_copy, 0, 0, 9 ))
+    # print(grid_copy[0][0], domain_copy[0][1])
+    # print(domain_copy[0][3])
+
+    # testing fc_search
+    grid = load_puzzle("puzzles/expert1.txt")
+    domain = compute_domains(grid)
+    fc_stats = {"nodes" : 0, "backtracks": 0, "wipeouts": 0}
+    fc_solution = fc_search(grid, domain, fc_stats)
+    plain_solution, plain_stats = solve(grid)
+    if fc_solution is None:
+        print("No solution found")
+    print_grid(fc_solution)
+    print(fc_solution == plain_solution)
+    print(fc_stats)
+    print(plain_stats)
+
+
