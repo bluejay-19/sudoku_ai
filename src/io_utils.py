@@ -1,6 +1,3 @@
-from solver import is_valid
-
-
 def load_puzzle(path):
     # create an empty list to store the rows in our sudoku
     grid = []
