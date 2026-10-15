@@ -1,4 +1,4 @@
-# solves each puzzle twice plain and then with MRV + FC
+# solves each puzzle twice - once in each mode (plain or mrv+fc)
 import csv
 import os
 from solver import solve
