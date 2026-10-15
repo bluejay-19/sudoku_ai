@@ -1,0 +1,3 @@
+Puzzle,Mode,Nodes,Backtracks,Wipeouts,Time
+brute-force.txt,plain,69175316,69175252,0,518.927183499909
+brute-force.txt,fc,63030,62966,7825,33.55133940000087
