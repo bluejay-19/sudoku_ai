@@ -87,15 +87,15 @@ def solve_clicked():
     status_label.configure(text="Solving...")
     root.update()
     solution, stats = solve(current_puzzle, modes[mode_var.get()])
-    if solution is None:
-        status_label.configure(text="No solution found")
-        return
-    show_grid(solution, current_puzzle)
     status_label.configure(text="Solved!")
     nodes_label.configure(text=f"Nodes: {stats['nodes']}")
     backtracks_label.configure(text=f"Backtracks: {stats['backtracks']}")
     wipeouts_label.configure(text=f"Wipeouts: {stats['wipeouts']}")
     time_label.configure(text=f"Time: {stats['time']:.6f}s")
+    if solution is None:
+        status_label.configure(text="No solution found")
+        return
+    show_grid(solution, current_puzzle)
 
 def make_panel_cards(parent, title):
     card = tk.Frame(parent, bg=panel_color, highlightbackground=border_color, highlightthickness=1)
@@ -105,7 +105,7 @@ def make_panel_cards(parent, title):
 
 def style_button(parent, text, command, bg, hover_bg):
     btn = tk.Button(parent,text=text, command=command, bg=bg, fg="white", font=ui_font,
-                     relief="flat", width=16, pady=10, activebackground="white", cursor="hand2")
+                     relief="flat", width=16, pady=10, activebackground=hover_bg, activeforeground="white",  cursor="hand2")
     btn.bind("<Enter>", lambda e: btn.configure(bg=hover_bg))
     btn.bind("<Leave>", lambda e: btn.configure(bg=bg))
     return btn
@@ -130,7 +130,7 @@ time_label.pack(anchor="w", padx=12, pady=(2,10))
 # Controls
 controls_card = make_panel_cards(panel_frame, "Controls")
 modes = {"Plain": "plain", "MRV + FC": "fc"}
-mode_var = tk.StringVar(value="Mode")
+mode_var = tk.StringVar(value="MRV + FC")
 mode_dropdown = tk.OptionMenu(controls_card, mode_var, *modes)
 mode_dropdown.config(bg="#2a2f4a", fg="white", activebackground=border_color, activeforeground="white",
                      relief="flat", highlightthickness=1, highlightbackground=border_color, width=12, font=ui_font)
