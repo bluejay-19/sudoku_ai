@@ -1,77 +1,62 @@
 #  Sudoku Solver 
-This is an intelligent version of a sudoku solver that incorporates the concept of plain backtracking paired with MRV(Minimum Value Remaining) and forward checking.
+This is an intelligent version of a sudoku solver that incorporates the concept of plain backtracking paired with MRV(Minimum Remaining Values) and forward checking.
 
 ## Features 
 - Plain Backtracking 
-- Plain and MRV + FC modes 
+- MRV + FC (Minimum Remaining Values + Forwarrd Checkimg) 
 - GUI (tkinter)
 - Command-line mode 
 - Benchmark script 
 - .txt and .csv input 
 
-## Requirements 
-- Python version 
-Both the python solver and the GUI use python's standard library that is shipped with tkinter
+## Requirements & Tech Stack
+- Python 3.13
+- tkinter (GUI)
+- Standard built-in libraries: os, copy, time, csv, sys
 - matplotlib - for chart visualisation
 
 ---
 
-## Tech Stack
-- Python 3.13 
-- tkinter (GUI)
-- Standard built-in libraries: os, copy, time, csv, sys
-- matplotlib 
-
----
-
 ## How to run: 
-- command line: ``` python src/main.py puzzles/easy1.txt [plain|fc] (default =fc) ```
-- GUI: ```python src/gui.py```
-- benchmark: ```python src/benchmark.py``` then ```python src/make_charts.py```
+Run all commands from the project root
+``` 
+python src/gui.py
+python src/main.py puzzles/easy1.txt [plain|fc] (default = fc) 
+python src/benchmark.py
+
+pip install -r requirements.txt
+python src/make_charts.py
+
+```
 
 ---
 
 ## Project Structure 
 ```
 sudoku_ai/
-├── src/                      
-|   └──benchmark.py             # runs both modes on the puzzles and writes to results/resuults.csv  
-|   └──benchmark_bruteforce.py                        
-|   └──gui.py                     # tkinter window   
-|   └──io_utils.py                # loading and validating puzzles 
-|   └──main.py                   # command-line entry point     
-|   └──make_charts.py                        
-|   └──solver.py        #solver logic - validity checks, plain backtracking, MRV, forward checking
-│
-├── puzzles/        # test puzzles
-|   └──bad.txt
-|   └──brute-force.txt
-│   └──easy1.txt
-|   └──easy2.txt
-|   └──easy4.csv              
-│   └──expert1.txt
-|   └──expert2.txt
-|   └──hard1.txt
-|   └──hard2.txt
-|   └──medium1.txt
-|   └──medium2.txt
-|   └──unsolvable1.txt
-|
-├── results/        # benchmark output
-|   └──brute-force.csv
-|   └──nodes_chart.png
-|   └──results.csv
-|   └──time_chart.png
-|
-└──README.md
-└──requirements.txt
-└──.gitignore
+├── src/
+│   ├── benchmark.py              # runs both modes on the puzzles, writes results/results.csv
+│   ├── benchmark_bruteforce.py   # separate run for the very slow brute-force puzzle
+│   ├── gui.py                    # tkinter window
+│   ├── io_utils.py               # loading and validating puzzles
+│   ├── main.py                   # command-line entry point
+│   ├── make_charts.py            # draws the evaluation charts (needs matplotlib)
+│   └── solver.py                 # validity checks, plain backtracking, MRV, forward checking
+├── puzzles/                      # test puzzles (easy, medium, hard, expert, bad, unsolvable, csv example)
+├── results/                      # benchmark output and charts
+├── README.md
+├── requirements.txt
+└── .gitignore
 
 ```
 ---
 
 ## Puzzles 
 File format: 9 lines of 9 values whhich are either separted by spaces for ```.txt``` files or by commas for ```.csv``` files. 0's in the file represent blank/empty cells
+
+```bad.txt ``` is the file that contains clashing givens - duplicate in a row/column/box, rejected before search  
+
+```unsolvable1.txt``` givens are consistent but no solution exists, search fails immediately
 
 ---
 
