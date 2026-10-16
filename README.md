@@ -71,15 +71,15 @@ sudoku_ai/
 ---
 
 ## Puzzles 
-File format: 9 lines of 9 values whhich are either separted by spaces for ```.txt``` files or by commas for ```.csv`` files. 0's in the file represent blank/empty cells
+File format: 9 lines of 9 values whhich are either separted by spaces for ```.txt``` files or by commas for ```.csv``` files. 0's in the file represent blank/empty cells
 
 ---
 
 ## Known limitations 
-The GUI does freeze when a very long solve (e,g the brute-force puzzle) in plain mode typically takes about 10 minutes. Hence the test showing the results of solving the brute-force puzzle is done in its own separate file ```benchmark_bruteforce.py``` and ```results/brute-force.csv``
+The GUI does freeze when a very long solve (e,g the brute-force puzzle) in plain mode typically takes about 10 minutes. Hence the test showing the results of solving the brute-force puzzle is done in its own separate file ```benchmark_bruteforce.py``` and ```results/brute-force.csv```
 
 ---
 
 ## References 
-All puzzles used for testing were obtained from this link: https://sudokly.com/hardest-sudoku/
-The brute force puzzle was taken from the Wikipedia page on Sudoku solving algorithms: https://en.wikipedia.org/wiki/Sudoku_solving_algorithms
+- All puzzles used for testing were obtained from this link: https://sudokly.com/hardest-sudoku/
+- The brute force puzzle was taken from the Wikipedia page on Sudoku solving algorithms: https://en.wikipedia.org/wiki/Sudoku_solving_algorithms
