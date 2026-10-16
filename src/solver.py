@@ -1,4 +1,14 @@
-#  import io_utils for load_puzzle and print_grid functionality
+""" Sudoky solving logic: two searches plus the solve() entry point
+
+plain - plain backtracking, always fills the first blank in the puzzle, this is the baseline 
+fc - backtracking with MRV cell selection and forward checking 
+
+There is nothing in this file that prints, making it reusable by main.py, gui.py and benchmark.py
+
+During initial development of the code there were tests done in the file itself, ensuring the solver actually worked.
+"""
+
+
 import time
 import copy
 
@@ -6,10 +16,13 @@ from io_utils import load_puzzle, print_grid
 
 # is valid answers the question: If I wrote a digit in this cell, would that digit repeat already in this cell's row, column or 3x3 box?
 def is_valid(grid, row, col, digit):
+    # row check
     if digit in grid[row]:
         return False
+    # column check: collecting the column into a list first
     if digit in [grid[i][col] for i in range(9)]:
         return False
+    # box check: (corner_row, corner_col)forms the top left cell of the 3x3 box
     corner_row = row - row % 3
     corner_col = col - col % 3
     for i in range(3):
@@ -18,35 +31,43 @@ def is_valid(grid, row, col, digit):
                 return False
     return True
 
-# find_empty answers the question of where is the next blank cell, scans the board and hands back the position of the first 0
+"""Returns (row,col) of the first blank that appears in the input puzzle in reading order. or None if the puzzle is full"""
 def find_empty(grid):
     for row in range(9):
         for col in range(9):
             if grid[row][col] == 0:
                 return row,col
-    return None # board is full - solved
+    return None # no blanks left, board is full/solved
 
-# core logic of the solver - plain backtracking
+"""Plain backtracking will fill the sudoky grid in place and return True if solved.
+
+stats["nodes"]  = digits placed (search effort)
+stats["backtracks"] = placements later done (wasted effort)
+
+"""
+# core logic of the solver 
 def backtrack(grid, stats):
     empty_cell = find_empty(grid)
     if empty_cell is None:
-        return True
+        return True      # base case: Board is full 
     row, col = empty_cell
     for digit in range(1,10):
         if is_valid(grid, row, col, digit):
             grid[row][col] = digit
-            # counts how many digits the solver placed = amount of work done (search steps measured)
             stats["nodes"] += 1
             result = backtrack(grid, stats)
             if result:
-                return True
+                return True # keep the digits, the board is now the solution
+            # dead end below: undo so the next digits starts from a clean board
             grid[row][col] = 0
-            # counts how many of those placements turned out to be wrong and need to be undone (amount of work wasted)
             stats["backtracks"] += 1
-    return False
+    return False    # no digit worked, so the caller has to undo its own move
 
-# domains - list of digits that could still go in that cell
-# a filled cell only has one possible value (the one already there), a blank cell has many digits dont clash
+
+""" Build the domains: a 9x9 list of sets that mirror the sudoku grid, wgere 
+domain[r][c] holds the digits that are still legal at that cell. 
+A filled cell holds a set with just its own digit. 
+"""
 def compute_domains(grid):
     domain = []
     for row in range(9):
@@ -57,7 +78,7 @@ def compute_domains(grid):
             if grid[row][col] != 0:
                 set_of_cells.add(grid[row][col]) # set should hold the current digit
             else:
-                # loop through all possible digits for a blank cell
+                # blank cell: keep every digit that does not class with the rpw/column/box
                 for digit in range(1,10):
                     if is_valid(grid, row, col, digit):
                         set_of_cells.add(digit)
@@ -65,70 +86,87 @@ def compute_domains(grid):
         domain.append(current_row)
     return domain
 
-# MRV - picks the blank cell with the fewest options first
-# forced moves get made early without guessing, doomed branches die near the top of the search tree
-# before the solver has to build a huge subtree under them
-# nodes and backtrakcs values drop which is an improvement from plain backtracking
+""" MRV (Minimum Remaining Values): return (row, col) of the blank cell that has the smallest domain, 
+or None if there are no blanks left in the sudoku grid. 
+Ties go to the firt cell in reading order; the degree heuristic is not used
+
+Forced moves get made early without guessing and doomed branches die near the top of the search tree
+Before the solver has to build a huge subtree under them 
+Nodes and backtrack values drop which is an improvement from plain backtracking 
+"""
+
 def select_mrv_cell(grid, domain):
-    # how many options does the most constrained cell seen so far have
-    best_size = 10
-    # which cell is the most constrained cell
-    best_cell = None
+    best_size = 10   # larger than any possible domain, allowing the first blank to always win
+    best_cell = None    # the most constrained cell
     for row in range(9):
         for col in range(9):
             # skip filled cells
             if grid[row][col] != 0:
-                continue
-            # compare domain's size with the best size
-            if len(domain[row][col]) < best_size:
+                continue    # only remaining candidates are blanks
+            if len(domain[row][col]) < best_size:   # compare domain's size with the best size using a strict '<' to get the earliest tie
                 best_size = len(domain[row][col])
                 best_cell = (row, col)
     return best_cell
 
 # FORWARD CHECKING
-# returns the 20 cells that share a row, column or box with (row,col)
+"""
+Return the 20 cells that share a row, column or 3x3 box with (row,col).
+Usess positions only, the grid is not needed.
+"""
 def get_peers(row, col):
     peers = set()
     corner_row = row - row % 3
     corner_col = col - col % 3
 
-    # cells in the same row: can't repeat this cell's digit
+    # cells in the same columnn (row number changes)
     for i in range(9):
         peers.add((i, col))
-    # cells in the same column
+    # cells in the same row (column number changes)
     for j in range(9):
         peers.add((row,j))
-    # cells in the same 3x3 box (this is what adds the 4 extra peers the row and column miss)
+    # cells in the same 3x3 box: adds the 4 peers the row and column miss. The set absorbs the overlaps, giving 20 not 24
     for m in range(3):
         for n in range(3):
             peers.add((corner_row + m, corner_col + n))
-    # a cell is not its own peer; otherwise forward checking would strip the digit from the cell that was just filled
+    # a cell is not its own peer, or forward checking would strip the digit from the cell that was just filled
     peers.discard((row,col))
     return peers
 
-# place a digit at a cell then tell every peer cell it can no longer use the placed digit
+""" Place digit at (row,col) and remove it from every peer's domain. 
+
+Returns false as soon as a peer's domain becomes empty (a dead end found early), True otherwise. 
+Edits the grid and domain in place and it may leave them partly updated on failure, so callers
+must pass copies. No validity check is needed: the digit comes from the cell's domain.
+
+When search picks up a digit from the domain it is valid by construction because a 
+cell's domain is already a list of digits that fit. Put the digit in the grid
+"""
 def assign(grid, domain, row, col, digit):
-    # when search picks up a digit from the domain it is valid by construction because a cell's domain is already a list of digits that fit
-    # put the digit in the grid
     grid[row][col] = digit
     domain[row][col] = set({digit})
     for r, c in get_peers(row,col):
-        # this digit is now taken in the peer's row/column/box
-        domain[r][c].discard(digit)
+        domain[r][c].discard(digit)  # this digit is now taken in the peer's row/column/box
         if len(domain[r][c]) == 0:
-            return False
+            return False     # wipeout: this peer has no legal digit left 
     return True
 
-# recursive forward checking search
-# same skeleton as backtrack but three differences: it picks the cell with MRV, it only tries digits from that cell's domain, and it then uses assign to place them
-# returns the solved grid or None, and works with copies of the grid and domain
+""" Backtracking with MRV and forward checking.
+
+Returns the solved grid, or None if no solution exists. Doesn't modify its arguments: 
+each atttempt works on fresh copies, which is the undo. 
+
+stats["nodes"] = digits tried from a domain (counts faiiled attempts too, so it is close to, 
+                but not identical to, the plain count)
+stats["wipeouts"] = dead ends caught by assign() before the search goes deeper 
+
+"""
 def fc_search (grid, domain, stats):
     cell = select_mrv_cell(grid, domain)
     if cell is None:
-        return grid
+        return grid  # no blanks left: the grid itself is the solution
     row, col = cell
     for digit in domain[row][col]:
-        # fresh copy per digit so a failed attempt leaves nothing behind (this is the undo)
+        # fresh copies per digit so a failed attempt leaves nothing behind
         grid_copy = copy.deepcopy(grid)
         domain_copy = copy.deepcopy(domain)
         # nodes = digits tried
@@ -138,13 +176,21 @@ def fc_search (grid, domain, stats):
             if result is not None:
                 return result
         else:
-            # wipeouts shows how many dead ends were detected before the search goes deeper
             stats["wipeouts"] += 1
         # counted whether assign failed immediately or the deeper search failed
         stats["backtracks"] += 1
-    return None
+    return None     # every digit faiied, so the caller has to try a different
 
-# helper function that performs pre-checks answering the question "would this digit be allowed here if the cell were empty" if not it clashes with another given digit before the solving even start
+
+""" Return True if two given digits clash (e.g, two 5s in one row)
+
+The search only validates digits it places, so without this a puzzle with clashing givens 
+couuld be reported as solved. Each given is temporarily emptied so is_valid doesn't find
+it in its own cell, then put back.
+
+It is a helper function that performs pre-checks 
+"""
+
 def conflict_check(grid):
     for row in range(9):
         for col in range(9):
@@ -152,12 +198,22 @@ def conflict_check(grid):
                 digit = grid[row][col]
                 grid[row][col] = 0      # empty the cell
                 value_fit = is_valid(grid, row, col, digit)
-                grid[row][col] = digit
+                grid[row][col] = digit      # always restore, whatever the answer
                 if not value_fit:
                     return True
     return False # no conflicts found
 
 
+""" Solve a puzzle and then measure the search.
+
+grid: 9x9 list of ints (0 = blank). It is copied, so the caller's puzzle is never changed.
+mode: "plain: or "fc". Any other value raises ValueError.
+
+Returns (solution, stats):
+    solution - solved 9x9 grid, or None if the puzzle has no solution 
+    stats  - dictionary with nodes, backtracks, wipeouts *fc only, 0 for plain) and time in seconds
+    
+"""
 def solve(grid, mode="plain"):
     valid_modes = ["plain", "fc"]
     if mode not in valid_modes:
@@ -166,12 +222,16 @@ def solve(grid, mode="plain"):
     grid_copy = copy.deepcopy(grid)
     stats ={"nodes": 0, "backtracks": 0, "wipeouts": 0, "time": 0}
 
-    # conflict check on the existing grid values (before solving)
+    # clashing givens: report no solution without searching (nodes stay 0)
     if conflict_check(grid_copy):
         stats["time"] = 0
         return None, stats
+
+    # the timer covers the search only, but in fc mode it also covers 
+    # compute_domains, a setup cost that plain mode does not pay
     start_time = time.perf_counter()
     if mode == "plain":
+        # backtrack edits the copy in place and only returns True/False
         result = backtrack(grid_copy, stats)
         if result is True:
             answer = grid_copy
@@ -184,104 +244,15 @@ def solve(grid, mode="plain"):
     stats["time"] = end_time - start_time
     return answer, stats
 
-# TESTING EXAMPLES
 
+# quick demo: both solvers on on epuzzle (run from the project root)
 if __name__ == "__main__":
-    #print_grid(grid)
-
-    # testing isValid() on easy1.txt
-    # print(is_valid(grid, 0, 0, 4)) # row check - return False (4 is in row 0 not in column 0 or the box)
-    # print(is_valid(grid, 0, 0, 3))  # col check - return False (3 is in column 0 not in row 0 or the box)
-    # print(is_valid(grid, 0, 0, 1)) # box check - return False (1 is in the top-left box, not in row or column 0)
-    # print(is_valid(grid, 0, 0, 9)) # returns True (9 is not in row or column 0 and not in the top-left box)
-    # print(is_valid(grid, 7, 6, 1))  # returns False - bottom-right box check (cell(7,6) is empty, row7 has 4 & 5, column 6 has 4,5,2,6 & 8, box has a 1 in row 6, 8th column)
-    # print(is_valid(grid, 7, 6, 3))  # returns True - (same box as above but there is no three in the row, column or anywhere else in the box)
-
-    # testing find_empty on easy1.txt and bad.txt
-    # print(find_empty(grid))
-    # grid = load_puzzle("puzzles/bad.txt")
-    # print(find_empty(grid))
-
-    # testing backtrack on easy1.txt
-    #grid = load_puzzle("puzzles/hard1.txt")
-    # stats = {"nodes": 0, "backtracks": 0}
-    # backtrack(grid, stats)
-    # print(f"Nodes: {stats['nodes']}, Backtracks: {stats['backtracks']}")
-    # print_grid(grid)
-
-    # testing solve
-    # grid = load_puzzle("puzzles/bad.txt")
-    # result, stats = solve(grid)
-    # print(f"Nodes: {stats['nodes']}, Backtracks: {stats['backtracks']}, Time: {stats['time']}")
-    # if result is None:
-    #     print("No solution found")
-    # else:
-    #     print_grid(result)
-
-    # testing compute_domain & select_mrv_cell
-    # grid = load_puzzle("puzzles/medium1.txt")
-    # domain = compute_domains(grid)
-    # print(select_mrv_cell(grid, domain))
-    # print(domain[0])
-
-    # # rigging a cell to have a smaller domain than the current smallest domain
-    # # smallest domain for medium1.txt is (0,0)
-    # domain[8][8] = {3}
-    # print(select_mrv_cell(grid, domain))
-
-    # testing select_mrv_cell on a solved grid - correctly returns None (there is nothing left to fill in a solved grid)
-    # grid = load_puzzle("puzzles/medium2.txt")
-    # solution, stats = solve(grid)
-    # domain = compute_domains(solution)
-    # print(select_mrv_cell(solution, domain))
-
-    # Testing get_peers
-    # grid = load_puzzle("puzzles/easy1.txt")
-    # domain = compute_domains(grid)
-    # row,column and box loops produce the right number of cells with overlaps counted once == 20
-    # print(len(get_peers(0,0)))
-    # same logic works from a different position in the grid (this test makes sure the corner arithmetic works with a cell that sits in the middle)
-    # print(len(get_peers(4, 4)))
-    # discard functionality worked - False (A cell must not count as its own peer)
-    # print((0,0) in get_peers(0,0))
-    # Box loop works - True (1,1) shares only a box with (0,0) not a row or column
-    # print((1, 1) in get_peers(0, 0))
-    # catches loops that add too much
-    # print((3, 3) in get_peers(0, 0))
-
-    #Testing assign
-    # grid = load_puzzle("puzzles/easy1.txt")
-    # grid_copy = copy.deepcopy(grid)
-    # domain_copy = compute_domains(grid_copy)
-    # domain_copy[0][1] = {9}
-    # print(assign(grid_copy, domain_copy, 0, 0, 9 ))
-    # print(grid_copy[0][0], domain_copy[0][1])
-    # print(domain_copy[0][3])
-
-    # testing fc_search
-    # grid = load_puzzle("puzzles/expert1.txt")
-    # domain = compute_domains(grid)
-    # fc_stats = {"nodes" : 0, "backtracks": 0, "wipeouts": 0}
-    # fc_solution = fc_search(grid, domain, fc_stats)
-    # plain_solution, plain_stats = solve(grid)
-    # if fc_solution is None:
-    #     print("No solution found")
-    # print_grid(fc_solution)
-    # print(fc_solution == plain_solution)
-    # print(fc_stats)
-    # print(plain_stats)
-
-    # testing solve with the updated fc_search and mrv included
     grid = load_puzzle("puzzles/easy1.txt")
-    plain_solution , plain_stats = solve(grid, "plain")
+    plain_solution, plain_stats = solve(grid, "plain")
     fc_solution, fc_stats = solve(grid, "fc")
 
-    print("PLAIN solution:")
+    print("Plain solution:")
     print_grid(plain_solution)
-    print("plain stats: ", plain_stats)
-
-    print("FC solution:")
-    print_grid(fc_solution)
-    print("fc stats:", fc_stats)
-
+    print("plain stats:", plain_stats)
+    print("fc stats:    ", fc_stats)
     print("Same answer from both?", plain_solution == fc_solution)
