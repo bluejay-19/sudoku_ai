@@ -8,7 +8,8 @@
 
 """
 
-""" Read a puzzle from a .txt(space-separated) or .csv(comma-separated) file 
+def load_puzzle(path):
+    """ Read a puzzle from a .txt(space-separated) or .csv(comma-separated) file 
 
     Returns a 9x9 list of integers, where 0 represnts a blank cell.
     Raisees ValueError, naming the line in the grid, if a row contains a non-nuumber, does 
@@ -16,8 +17,7 @@
     file itself does not contai exactly 9 rows. 
     Additionally it also raises FileNotFoundError if the path does not exist (from open())
 
-"""
-def load_puzzle(path):
+    """
     # create an empty list to store the rows in our sudoku
     grid = []
     # open the file for reading
@@ -52,8 +52,9 @@ def load_puzzle(path):
 
     return grid
 
-""" Prints a 9x9 grid with separators between the 3x3 boxes: 0 is represted using dots '.'  """
+
 def print_grid(grid):
+    """ Prints a 9x9 grid with separators between the 3x3 boxes: 0 is represted using dots '.'  """
     # row loop
     for row_index, row in enumerate(grid, start=0):
         grid_values = []
