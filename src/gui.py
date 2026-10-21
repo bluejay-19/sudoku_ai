@@ -53,12 +53,12 @@ for r in range(9):
     cells.append(row_widgets)
 
 # Functions 
-"""
+def show_grid(grid, givens):
+    """
     show_grid: draws grid with digits that were also in givens in white 
     and solver-filled digits in cyan
 
-"""
-def show_grid(grid, givens):
+    """
     for row in range(9):
         for col in range(9):
             value = grid[row][col]
@@ -72,12 +72,13 @@ def show_grid(grid, givens):
                 color = solved_digits
             cells[row][col].configure(text=text, fg=color, font=cell_font)
 
-"""
+
+def load_clicked():
+    """
     load_clicked: opens a file dialog, loads and validates the puzzles, 
     shows it and clears the stats in the side panel
 
-"""
-def load_clicked():
+    """
     global current_puzzle
     path = filedialog.askopenfilename(filetypes=[("Puzzle files", "*.txt *.csv")])
     if not path:
@@ -95,11 +96,12 @@ def load_clicked():
     wipeouts_label.configure(text="Wipeouts:")
     time_label.configure(text="Time:")
 
-"""
+
+def solve_clicked():
+    """
     solve_clicked: solves the loaded puzzle in the chosen mode and updates the grid and stats
 
-"""
-def solve_clicked():
+    """
     # the window freezes during a long solve (e.g. when testing the brute-force puzzle in plain mode)
     if current_puzzle is None:
         status_label.configure(text="Please load a puzzle first")
@@ -118,21 +120,24 @@ def solve_clicked():
     else:
         show_grid(solution, current_puzzle)
         status_label.configure(text="Solved!")
-"""
+
+
+def make_panel_cards(parent, title):
+    """
     make_panel_cards: creates a tilted card frame in the side panel
 
-"""
-def make_panel_cards(parent, title):
+    """
     card = tk.Frame(parent, bg=panel_color, highlightbackground=border_color, highlightthickness=1)
     card.pack(fill="x", pady=8)
     tk.Label(card, text=title, bg=panel_color, fg="#9fb4d9", font=ui_font).pack(anchor="w", padx=12, pady=(10,4))
     return card
 
-"""
+
+def style_button(parent, text, command, bg, hover_bg):
+    """
     style_button: creates a flat button with a hover colour
 
-"""
-def style_button(parent, text, command, bg, hover_bg):
+    """
     btn = tk.Button(parent,text=text, command=command, bg=bg, fg="white", font=ui_font,
                      relief="flat", width=16, pady=10, activebackground=hover_bg, activeforeground="white",  cursor="hand2")
     btn.bind("<Enter>", lambda e: btn.configure(bg=hover_bg))
